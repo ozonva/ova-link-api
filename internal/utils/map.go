@@ -1,19 +1,16 @@
 package utils
 
-import "sort"
+import "errors"
 
-func MapInvert(inputMap map[string]int) map[int]string {
-	result := make(map[int]string, 0)
+func MapInvert(inputMap map[string]int) (map[int]string, error) {
+	result := make(map[int]string, len(inputMap))
 
-	keys := make([]string, 0, len(inputMap))
-	for key := range inputMap {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		result[inputMap[key]] = key
+	for key, value := range inputMap {
+		if _, ok := result[value]; ok {
+			return nil, errors.New("duplicate key exists")
+		}
+		result[value] = key
 	}
 
-	return result
+	return result, nil
 }

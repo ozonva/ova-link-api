@@ -6,7 +6,12 @@ func SliceChunk(inputSlice []int, size int) [][]int {
 		return make([][]int, 0, 0)
 	}
 
-	result := make([][]int, 0, sliceLength/size)
+	capacity := sliceLength / size
+	if sliceLength%size != 0 {
+		capacity += 1
+	}
+
+	result := make([][]int, 0, capacity)
 	for from := 0; from < sliceLength; {
 		to := from + size
 
@@ -23,40 +28,25 @@ func SliceChunk(inputSlice []int, size int) [][]int {
 }
 
 func SliceFilterByList(inputSlice []int) []int {
-	hash := make(map[int]bool, 0)
 	result := make([]int, 0, len(inputSlice))
 	list := []int{-7, -5, -3, -1, 0, 1, 3, 5, 7}
+	filter := getFilterMap(list)
 
 	for _, value := range inputSlice {
-		if _, ok := hash[value]; ok {
+		if _, ok := filter[value]; !ok {
 			result = append(result, value)
 			continue
-		}
-
-		if binarySearch(value, list) == -1 {
-			result = append(result, value)
-			hash[value] = true
 		}
 	}
 
 	return result
 }
 
-func binarySearch(needle int, haystack []int) int {
-	to := len(haystack)
-	mid := -1
-	for from := 0; from < to; {
-		mid = (from + to) / 2
-		if needle == haystack[mid] {
-			return mid
-		}
-
-		if needle < haystack[mid] {
-			to = mid
-		} else {
-			from = mid + 1
-		}
+func getFilterMap(slice []int) map[int]bool {
+	filter := make(map[int]bool, len(slice))
+	for _, v := range slice {
+		filter[v] = true
 	}
 
-	return -1
+	return filter
 }
