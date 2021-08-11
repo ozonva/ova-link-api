@@ -3,3 +3,6 @@ run:
 
 build:
 	go build ./cmd/ova-link-api/
+
+test-internal:
+	go test ./internal/...
