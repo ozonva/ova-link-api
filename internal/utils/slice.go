@@ -1,5 +1,38 @@
 package utils
 
+import (
+	"errors"
+
+	"github.com/ozonva/ova-link-api/internal/link"
+)
+
+func SliceChunkLink(inputSlice []link.Link, size uint) [][]link.Link {
+	sliceLength := uint(len(inputSlice))
+	if sliceLength == 0 || size <= 0 {
+		return make([][]link.Link, 0, 0)
+	}
+
+	capacity := sliceLength / size
+	if sliceLength%size != 0 {
+		capacity += 1
+	}
+
+	result := make([][]link.Link, 0, capacity)
+	for from := uint(0); from < sliceLength; {
+		to := from + size
+
+		if to > sliceLength {
+			result = append(result, inputSlice[from:])
+		} else {
+			result = append(result, inputSlice[from:to])
+		}
+
+		from = to
+	}
+
+	return result
+}
+
 func SliceChunk(inputSlice []int, size int) [][]int {
 	sliceLength := len(inputSlice)
 	if sliceLength == 0 || size <= 0 {
@@ -40,6 +73,18 @@ func SliceFilterByList(inputSlice []int) []int {
 	}
 
 	return result
+}
+
+func SliceLinkToMapLink(links []link.Link) (map[uint64]link.Link, error) {
+	result := make(map[uint64]link.Link, len(links))
+	for _, l := range links {
+		if _, ok := result[l.GetID()]; ok {
+			return nil, errors.New("duplicate link id")
+		}
+		result[l.GetID()] = l
+	}
+
+	return result, nil
 }
 
 func getFilterMap(slice []int) map[int]bool {
