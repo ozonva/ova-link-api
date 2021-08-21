@@ -10,7 +10,6 @@ type Updater func(configPath string) error
 
 var readConfig = func(configPath string) error {
 	file, err := os.Open(configPath)
-	log.Println("Open file: " + configPath)
 	if err != nil {
 		return err
 	}
@@ -19,7 +18,6 @@ var readConfig = func(configPath string) error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Close file: " + configPath)
 	}()
 	return nil
 }

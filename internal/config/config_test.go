@@ -1,28 +1,11 @@
 package config
 
 import (
-	"errors"
-	"testing"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const configPath = "./../../configs/"
-
-var updateConfigTestCases = []struct {
-	caseName   string
-	configPath string
-	expected   error
-}{
-	{
-		"success update",
-		configPath + "config.json",
-		nil,
-	},
-	{
-		"error update",
-		configPath + "config_wrong.json",
-		errors.New("open ./../../configs/config_wrong.json: no such file or directory"),
-	},
-}
 
 func ConfigUpdaterMock(configPath string) error {
 	for i := 0; i < 5; i++ {
@@ -35,16 +18,15 @@ func ConfigUpdaterMock(configPath string) error {
 	return nil
 }
 
-func TestUpdateConfig(t *testing.T) {
-	for _, testCase := range updateConfigTestCases {
-		err := UpdateConfig(testCase.configPath, ConfigUpdaterMock)
-		if err != nil {
-			if testCase.expected == nil {
-				t.Fatalf(`%v. Expected err: %v. Actual: %v`, testCase.caseName, testCase.expected, err)
-			}
-			if err.Error() != testCase.expected.Error() {
-				t.Fatalf(`%v. Expected err: %v. Actual: %v`, testCase.caseName, testCase.expected, err)
-			}
-		}
-	}
-}
+var _ = Describe("Update config.", func() {
+	It("Success update.", func() {
+		Expect(
+			UpdateConfig(configPath+"config.json", ConfigUpdaterMock),
+		).Should(BeNil())
+	})
+	It("Failure update.", func() {
+		Expect(
+			UpdateConfig(configPath+"config_wrong.json", ConfigUpdaterMock),
+		).Should(MatchError("open ./../../configs/config_wrong.json: no such file or directory"))
+	})
+})
