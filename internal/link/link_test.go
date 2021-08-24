@@ -1,237 +1,138 @@
 package link
 
 import (
-	"regexp"
-	"testing"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"time"
 )
 
-func TestCreateLink(t *testing.T) {
-	userId := uint64(1)
+var _ = Describe("Link.", func() {
 	id := uint64(1)
+	userId := uint64(2)
 	url := "https://test.com"
-	expected := &Link{
-		id,
-		userId,
-		url,
-		"",
-		make(map[Tag]struct{}),
-		time.Now(),
-	}
+	expected := &Link{id, userId, url, "", make(map[Tag]struct{}), time.Now()}
 
-	actual := New(id, userId, url)
-	if expected.GetID() != actual.GetID() {
-		t.Fatalf(
-			`%v. Expected: %v. Actual: %v`, "create link simple link",
-			expected.GetID(),
-			actual.GetID(),
-		)
-	}
+	Context("Creation.", func() {
+		linkEntity := New(id, userId, url)
 
-	if expected.GetUserID() != actual.GetUserID() {
-		t.Fatalf(
-			`%v. Expected: %v. Actual: %v`, "create link simple link",
-			expected.GetUserID(),
-			actual.GetUserID(),
-		)
-	}
-	if expected.GetURL() != actual.GetURL() {
-		t.Fatalf(
-			`%v. Expected: %v. Actual: %v`, "create link simple link",
-			expected.GetURL(),
-			actual.GetURL(),
-		)
-	}
-	if len(expected.GetTags()) != len(actual.GetTags()) {
-		t.Fatalf(
-			`%v. Expected len: %v. Actual len: %v`, "create link simple link",
-			len(expected.GetTags()),
-			len(actual.GetTags()),
-		)
-	}
+		It("ID should be the same", func() {
+			Expect(linkEntity.GetID()).Should(BeIdenticalTo(expected.GetID()))
+		})
+		It("User should ID be the same", func() {
+			Expect(linkEntity.GetUserID()).Should(BeIdenticalTo(expected.GetUserID()))
+		})
+		It("URL should be the same", func() {
+			Expect(linkEntity.GetURL()).Should(BeIdenticalTo(expected.GetURL()))
+		})
+		It("Description should be the same", func() {
+			Expect(linkEntity.GetDescription()).Should(BeIdenticalTo(expected.GetDescription()))
+		})
+		It("Tags should be the same", func() {
+			Expect(linkEntity.GetTags()).Should(BeEquivalentTo(expected.GetTags()))
+		})
+		It("Time should be different", func() {
+			Expect(linkEntity.GetDateCreated().After(expected.GetDateCreated())).Should(BeTrue())
+		})
+	})
+	Context("Set values.", func() {
+		linkEntity := New(id, userId, url)
+		description := "some description"
+		newUrl := "https://new_test.com"
+		linkEntity.SetDescription(description)
+		linkEntity.SetURL(newUrl)
 
-	if !expected.GetDateCreated().Before(actual.GetDateCreated()) {
-		t.Fatalf(
-			`%v. Expected len: %v. Actual len: %v`, "create link simple link",
-			expected.GetDateCreated(),
-			actual.GetDateCreated(),
-		)
-	}
-}
+		tags := make(map[Tag]struct{})
+		tags["tag1"] = struct{}{}
+		tags["tag2"] = struct{}{}
+		linkEntity.SetTags(tags)
 
-func TestLinkSetGet(t *testing.T) {
-	userId := uint64(1)
-	id := uint64(1)
-	url := "https://test.com"
+		It("Description should be updated", func() {
+			Expect(linkEntity.GetDescription()).Should(BeIdenticalTo(description))
+			Expect(linkEntity.GetDescription()).ShouldNot(BeIdenticalTo(expected.GetDescription()))
+		})
+		It("Tags should be updated", func() {
+			Expect(linkEntity.GetTags()).Should(BeEquivalentTo(tags))
+			Expect(linkEntity.GetTags()).ShouldNot(BeEquivalentTo(expected.GetTags()))
+		})
+	})
+	Context("Add/remove tags.", func() {
+		linkEntity := New(id, userId, url)
+		tags := make(map[Tag]struct{})
+		tags["tag1"] = struct{}{}
+		tags["tag2"] = struct{}{}
+		linkEntity.SetTags(tags)
 
-	link := New(id, userId, url)
+		It("Tags should be added.", func() {
+			linkEntity.AddTag("tag3")
+			linkEntity.AddTag("tag4")
+			linkEntity.AddTag("tag1")
+			linkEntity.AddTag("tag2")
 
-	description := "some description"
-	newUrl := "https://new_test.com"
-	link.SetDescription(description)
-	link.SetURL(newUrl)
+			Expect(linkEntity.GetTags()).Should(BeEquivalentTo(map[Tag]struct{}{"tag1": {}, "tag2": {}, "tag3": {}, "tag4": {}}))
+		})
+		It("Tags should be removed.", func() {
+			linkEntity.RemoveTag("tag3")
+			linkEntity.RemoveTag("tag1")
+			linkEntity.RemoveTag("tag3")
+			linkEntity.RemoveTag("tag1")
 
-	tags := make(map[Tag]struct{})
-	tags["tag1"] = struct{}{}
-	tags["tag2"] = struct{}{}
-	link.SetTags(tags)
+			Expect(linkEntity.GetTags()).Should(BeEquivalentTo(map[Tag]struct{}{"tag2": {}, "tag4": {}}))
+		})
+	})
+	Context("Compare with another link entity.", func() {
+		linkEntity1 := New(id, userId, url)
+		linkCopy := *linkEntity1
+		linkEntity2 := &linkCopy
+		linkEntity2.SetTags(make(map[Tag]struct{}, 0))
+		description := "some description"
 
-	if link.GetUserID() != userId {
-		t.Fatalf(
-			`%v. Expected: %v. Actual: %v`, "link get/set",
-			userId,
-			link.GetUserID(),
-		)
-	}
-	if link.GetURL() != newUrl {
-		t.Fatalf(
-			`%v. Expected: %v. Actual: %v`, "link get/set",
-			newUrl,
-			link.GetURL(),
-		)
-	}
-	if link.GetDescription() != description {
-		t.Fatalf(
-			`%v. Expected: %v. Actual: %v`, "link get/set",
-			description,
-			link.GetURL(),
-		)
-	}
-	if len(link.GetTags()) != len(tags) {
-		t.Fatalf(
-			`%v. Expected len: %v. Actual len: %v`, "link get/set",
-			len(tags),
-			len(link.GetTags()),
-		)
-	}
+		It("Two empty link should be equal", func() {
+			Expect(linkEntity1.Equals(linkEntity2)).Should(BeTrue())
+		})
 
-	for tag := range tags {
-		if _, ok := link.GetTags()[tag]; !ok {
-			t.Fatalf(
-				`%v. Expected key: %v doesn't exist`, "link get/set",
-				tag,
-			)
-		}
-	}
-}
+		It("Add tags. Links should not be equal.", func() {
+			linkEntity2.AddTag("tag1")
+			linkEntity2.AddTag("tag2")
+			Expect(linkEntity1.Equals(linkEntity2)).Should(BeFalse())
 
-func TestLinkAddRemoveTags(t *testing.T) {
-	userId := uint64(1)
-	id := uint64(1)
-	url := "https://test.com"
+			linkEntity1.AddTag("tag2")
+			Expect(linkEntity1.Equals(linkEntity2)).Should(BeFalse())
 
-	link := New(id, userId, url)
+			linkEntity1.AddTag("tag3")
+			Expect(linkEntity1.Equals(linkEntity2)).Should(BeFalse())
+		})
 
-	tags := make(map[Tag]struct{})
-	tags["tag1"] = struct{}{}
-	tags["tag2"] = struct{}{}
-	link.SetTags(tags)
+		It("Make tags are the same. Links should be equal.", func() {
+			linkEntity1.RemoveTag("tag3")
+			linkEntity1.AddTag("tag1")
+			Expect(linkEntity1.Equals(linkEntity2)).Should(BeTrue())
+		})
 
-	link.AddTag("tag3")
-	link.AddTag("tag4")
-	link.AddTag("tag1")
-	link.AddTag("tag2")
+		It("Change description. Links should not be equal.", func() {
+			linkEntity1.SetDescription(description)
+			Expect(linkEntity1.Equals(linkEntity2)).Should(BeFalse())
+		})
 
-	if len(link.GetTags()) != 4 {
-		t.Fatalf(
-			`%v. Expected len: %v. Actual len: %v`, "link add/remove tag",
-			4,
-			len(link.GetTags()),
-		)
-	}
+		It("Make description the same. Links should be equal.", func() {
+			linkEntity2.SetDescription(description)
+			Expect(linkEntity1.Equals(linkEntity2)).Should(BeTrue())
+		})
+	})
+	Context("Cast to string.", func() {
+		defer GinkgoRecover()
+		linkEntity := New(id, userId, url)
+		linkEntity.SetDescription("Ozon Go School. Project.")
+		tags := make(map[Tag]struct{})
+		linkEntity.SetTags(tags)
+		linkEntity.AddTag("tag1")
+		linkEntity.AddTag("tag2")
 
-	for _, tag := range []Tag{"tag1", "tag2", "tag3", "tag4"} {
-		if _, ok := link.GetTags()[tag]; !ok {
-			t.Fatalf(
-				`%v. Expected key: %v doesn't exist`, "link add/remove tag",
-				tag,
-			)
-		}
-	}
-
-	link.RemoveTag("tag3")
-	link.RemoveTag("tag1")
-	link.RemoveTag("tag3")
-	link.RemoveTag("tag1")
-
-	if len(link.GetTags()) != 2 {
-		t.Fatalf(
-			`%v. Expected len: %v. Actual len: %v`, "link add/remove tag",
-			2,
-			len(link.GetTags()),
-		)
-	}
-
-	for _, tag := range []Tag{"tag2", "tag4"} {
-		if _, ok := link.GetTags()[tag]; !ok {
-			t.Fatalf(
-				`%v. Expected key: %v doesn't exist`, "link add/remove tag",
-				tag,
-			)
-		}
-	}
-}
-
-func TestLinkEquals(t *testing.T) {
-	link1 := New(1, 1, "https://test1.com")
-	linkCopy := *link1
-	link2 := &linkCopy
-	link2.SetTags(make(map[Tag]struct{}, 0))
-
-	if !link1.Equals(link2) {
-		t.Fatalf("%v. Structures should be equal:\n%v\n%v", "link equality", link1, link2)
-	}
-
-	link2.AddTag("tag1")
-	link2.AddTag("tag2")
-	if link1.Equals(link2) {
-		t.Fatalf("%v. Structures should not be equal:\n%v\n%v", "link equality", link1, link2)
-	}
-
-	link1.AddTag("tag2")
-	if link1.Equals(link2) {
-		t.Fatalf("%v. Structures should not be equal:\n%v\n%v", "link equality", link1, link2)
-	}
-
-	link1.AddTag("tag3")
-	if link1.Equals(link2) {
-		t.Fatalf("%v. Structures should not be equal:\n%v\n%v", "link equality", link1, link2)
-	}
-
-	link1.RemoveTag("tag3")
-	link1.AddTag("tag1")
-	if !link1.Equals(link2) {
-		t.Fatalf("%v. Structures should be equal:\n%v\n%v", "link equality", link1, link2)
-	}
-
-	newDescription := "New Description"
-	link1.SetDescription(newDescription)
-	if link1.Equals(link2) {
-		t.Fatalf("%v. Structures should not be equal:\n%v\n%v", "link equality", link1, link2)
-	}
-
-	link2.SetDescription(newDescription)
-	if !link1.Equals(link2) {
-		t.Fatalf("%v. Structures should be equal:\n%v\n%v", "link equality", link1, link2)
-	}
-}
-
-func TestLinkString(t *testing.T) {
-	link1 := New(1, 2, "https://test1.com")
-	link1.SetDescription("Ozon Go School. Project.")
-	tags := make(map[Tag]struct{})
-	link1.SetTags(tags)
-	link1.AddTag("tag1")
-	link1.AddTag("tag2")
-
-	re := regexp.MustCompile(`ID: 1,
+		regexpString := `ID: 1,
 UserID: 2,
-URL: "https://test1.com",
+URL: "https://test.com",
 Description: "Ozon Go School. Project.",
 Tags: map\[tag1:{} tag2:{}],
-DateCreated: [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+[0-9]{2}:[0-9]{2}`)
-
-	if !re.MatchString(link1.String()) {
-		t.Fatalf("%v. Expected: %v, Actual: %v", "link string", re, link1.String())
-	}
-}
+DateCreated: [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+[0-9]{2}:[0-9]{2}`
+		Expect(linkEntity.String()).Should(MatchRegexp(regexpString))
+	})
+})
