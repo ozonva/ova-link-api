@@ -30,10 +30,10 @@ var _ = Describe("Saver", func() {
 
 		repo.EXPECT().AddEntities(gomock.Any()).Times(2).Return(nil)
 
-		timeoutSaver.Save(*link.New(1, 1, "1"))
-		timeoutSaver.Save(*link.New(2, 1, "2"))
-		timeoutSaver.Save(*link.New(3, 2, "3"))
-		timeoutSaver.Save(*link.New(4, 2, "4"))
+		timeoutSaver.Save(*link.New(1, "1"))
+		timeoutSaver.Save(*link.New(1, "2"))
+		timeoutSaver.Save(*link.New(2, "3"))
+		timeoutSaver.Save(*link.New(2, "4"))
 
 		time.Sleep(2 * time.Second)
 	})
@@ -44,10 +44,10 @@ var _ = Describe("Saver", func() {
 
 		repo.EXPECT().AddEntities(gomock.Any()).Times(2).Return(nil)
 
-		timeoutSaver.Save(*link.New(1, 1, "1"))
-		timeoutSaver.Save(*link.New(2, 1, "2"))
-		timeoutSaver.Save(*link.New(3, 2, "3"))
-		timeoutSaver.Save(*link.New(4, 2, "4"))
+		timeoutSaver.Save(*link.New(1, "1"))
+		timeoutSaver.Save(*link.New(1, "2"))
+		timeoutSaver.Save(*link.New(2, "3"))
+		timeoutSaver.Save(*link.New(2, "4"))
 
 		timeoutSaver.Close()
 		time.Sleep(1 * time.Second)

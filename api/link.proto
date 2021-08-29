@@ -10,11 +10,7 @@ message CreateLinkRequest {
   uint64 user_id = 1;
   string url = 2;
   string description = 3;
-  map<string, google.protobuf.Empty> tags = 4;
-}
-
-message CreateLinkResponse {
-  uint64 id = 1;
+  repeated string tags = 4;
 }
 
 message DeleteLinkRequest {
@@ -30,7 +26,7 @@ message DescribeLinkResponse {
   uint64 user_id = 2;
   string url = 3;
   string description = 4;
-  map<string, google.protobuf.Empty> tags = 5;
+  repeated string tags = 5;
   google.protobuf.Timestamp date_created = 6;
 }
 
@@ -44,7 +40,7 @@ message ListLinkResponse {
 }
 
 service LinkAPI {
-  rpc CreateLink(CreateLinkRequest) returns (CreateLinkResponse) {}
+  rpc CreateLink(CreateLinkRequest) returns (google.protobuf.Empty) {}
   rpc DescribeLink(DescribeLinkRequest) returns (DescribeLinkResponse) {}
   rpc ListLink(ListLinkRequest) returns (ListLinkResponse) {}
   rpc DeleteLink(DeleteLinkRequest) returns (google.protobuf.Empty) {}

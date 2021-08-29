@@ -2,108 +2,88 @@ package link
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 )
 
-type Tag string
-
 type Link struct {
-	id          uint64
-	userID      uint64
-	url         string
-	description string
-	tags        map[Tag]struct{}
-	dateCreated time.Time
+	ID          uint64
+	UserID      uint64 `db:"user_id"`
+	Url         string
+	Description string
+	Tags        string
+	CreatedAt   time.Time `db:"created_at"`
 }
 
-func New(id uint64, userID uint64, url string) *Link {
-	return &Link{id, userID, url, "", make(map[Tag]struct{}, 0), time.Now()}
+func New(userID uint64, url string) *Link {
+	return &Link{0, userID, url, "", "", time.Now()}
 }
 
 func (l *Link) String() string {
 	return fmt.Sprintf(
-		"ID: %v,\nUserID: %v,\nURL: %q,\nDescription: %q,\nTags: %v,\nDateCreated: %v",
-		l.id,
-		l.userID,
-		l.url,
-		l.description,
-		l.tags,
-		l.dateCreated.Format(time.RFC3339),
+		"ID: %v,\nUserID: %v,\nURL: %q,\nDescription: %q,\nTags: %q,\nDateCreated: %v",
+		l.ID,
+		l.UserID,
+		l.Url,
+		l.Description,
+		l.Tags,
+		l.CreatedAt.Format(time.RFC3339),
 	)
 }
 
 func (l *Link) Equals(inputLink *Link) bool {
-	if l.GetID() != inputLink.GetID() {
+	if l.ID != inputLink.ID {
 		return false
 	}
-	if l.GetUserID() != inputLink.GetUserID() {
+	if l.UserID != inputLink.UserID {
 		return false
 	}
-	if l.GetURL() != inputLink.GetURL() {
+	if l.Url != inputLink.Url {
 		return false
 	}
-	if !l.GetDateCreated().Equal(inputLink.GetDateCreated()) {
+	if l.Description != inputLink.Description {
 		return false
 	}
-	if l.GetDescription() != inputLink.GetDescription() {
+	tags := l.GetTagsAsSlice()
+	inputTags := inputLink.GetTagsAsSlice()
+	if len(tags) != len(inputTags) {
 		return false
 	}
-	if len(l.GetTags()) != len(inputLink.GetTags()) {
+	sort.Strings(tags)
+	sort.Strings(inputTags)
+	if strings.Join(tags, "#") != strings.Join(inputTags, "#") {
 		return false
 	}
-	for tag := range l.GetTags() {
-		if _, ok := inputLink.GetTags()[tag]; !ok {
-			return false
-		}
+
+	if !l.CreatedAt.Equal(inputLink.CreatedAt) {
+		return false
 	}
 
 	return true
 }
 
-func (l *Link) GetID() uint64 {
-	return l.id
-}
-
-func (l *Link) GetUserID() uint64 {
-	return l.userID
-}
-
-func (l *Link) SetURL(url string) {
-	l.url = url
-}
-
-func (l *Link) GetURL() string {
-	return l.url
-}
-
-func (l *Link) SetDescription(description string) {
-	l.description = description
-}
-
-func (l *Link) GetDescription() string {
-	return l.description
-}
-
-func (l *Link) GetTags() map[Tag]struct{} {
-	return l.tags
-}
-
-func (l *Link) SetTags(tags map[Tag]struct{}) {
-	l.tags = tags
-}
-
-func (l *Link) GetDateCreated() time.Time {
-	return l.dateCreated
-}
-
-func (l *Link) AddTag(tag Tag) {
-	if _, ok := l.tags[tag]; !ok {
-		l.tags[tag] = struct{}{}
+func (l *Link) AddTag(tag string) {
+	if strings.Index(l.Tags, tag) == -1 {
+		if len(l.Tags) > 0 {
+			l.Tags += "#" + tag
+		} else {
+			l.Tags += tag
+		}
 	}
 }
 
-func (l *Link) RemoveTag(tag Tag) {
-	if _, ok := l.tags[tag]; ok {
-		delete(l.tags, tag)
-	}
+func (l *Link) RemoveTag(tag string) {
+	l.Tags = strings.Replace(l.Tags, tag, "", 1)
+	l.Tags = strings.ReplaceAll(l.Tags, "##", "#")
+	l.Tags = strings.TrimPrefix(l.Tags, "#")
+	l.Tags = strings.TrimSuffix(l.Tags, "#")
+}
+
+func (l *Link) GetTagsAsSlice() []string {
+	return strings.Split(l.Tags, "#")
+}
+
+func (l *Link) SetTagsAsSlice(tags []string) {
+	l.Tags = strings.Join(tags, "#")
 }
