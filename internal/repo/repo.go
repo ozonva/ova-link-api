@@ -1,8 +1,6 @@
 package repo
 
 import (
-	"log"
-
 	"github.com/Masterminds/squirrel"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -20,12 +18,7 @@ type LinkRepo struct {
 	db *sqlx.DB
 }
 
-func NewLinkRepo(conn string) *LinkRepo {
-	db, err := sqlx.Open("pgx", conn)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
+func NewLinkRepo(db *sqlx.DB) *LinkRepo {
 	return &LinkRepo{
 		db: db,
 	}
@@ -50,7 +43,6 @@ func (lp *LinkRepo) AddEntities(entities []link.Link) error {
 }
 
 func (lp *LinkRepo) ListEntities(limit uint64, offset uint64) ([]link.Link, error) {
-	result := make([]link.Link, 0, 0)
 	sqlBuilder := squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Dollar).
 		Select("id", "user_id", "url", "description", "tags", "created_at").
@@ -59,19 +51,19 @@ func (lp *LinkRepo) ListEntities(limit uint64, offset uint64) ([]link.Link, erro
 
 	sql, params, err := sqlBuilder.ToSql()
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
+	result := make([]link.Link, 0, 0)
 	err = lp.db.Select(&result, sql, params...)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
 	return result, nil
 }
 
 func (lp *LinkRepo) DescribeEntity(entityId uint64) (*link.Link, error) {
-	result := &link.Link{}
 	sqlBuilder := squirrel.StatementBuilder.
 		PlaceholderFormat(squirrel.Dollar).
 		Select("id", "user_id", "url", "description", "tags", "created_at").
@@ -80,12 +72,13 @@ func (lp *LinkRepo) DescribeEntity(entityId uint64) (*link.Link, error) {
 
 	sql, _, err := sqlBuilder.ToSql()
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
+	result := &link.Link{}
 	err = lp.db.Get(result, sql, entityId)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
 	return result, nil

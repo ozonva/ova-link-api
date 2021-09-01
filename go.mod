@@ -13,6 +13,7 @@ require (
 	github.com/onsi/gomega v1.16.0
 	github.com/pressly/goose/v3 v3.1.0 // indirect
 	github.com/rs/zerolog v1.23.0
+	github.com/zhashkevych/go-sqlxmock v1.5.2-0.20201023121933-f973d0041cfc // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/grpc v1.40.0

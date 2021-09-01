@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"os"
 
 	"github.com/ozonva/ova-link-api/internal/repo"
 
@@ -24,19 +23,21 @@ import (
 
 type LinkAPI struct {
 	grpc.LinkAPIServer
-	repo  *repo.LinkRepo
-	saver saver.Saver
+	repo   repo.Repo
+	saver  saver.Saver
+	logger zerolog.Logger
 }
 
-func NewLinkAPI() grpc.LinkAPIServer {
+func NewLinkAPI(repo repo.Repo, logger zerolog.Logger) grpc.LinkAPIServer {
 	api := &LinkAPI{}
-	api.repo = repo.NewLinkRepo("postgres://user_links:123456@localhost:5432/user_links?sslmode=disable")
+	api.repo = repo
 	api.saver = saver.NewTimeOutSaver(10, flusher.NewFlusher(3, api.repo), 1)
+	api.logger = logger
 	return api
 }
 
 func (api *LinkAPI) CreateLink(ctx context.Context, req *grpc.CreateLinkRequest) (*emptypb.Empty, error) {
-	grpclog.SetLoggerV2(grpczerolog.New(zerolog.New(os.Stdout)))
+	grpclog.SetLoggerV2(grpczerolog.New(api.logger))
 	grpclog.Info(req)
 
 	entity := link.New(req.UserId, req.Url)
@@ -51,7 +52,7 @@ func (api *LinkAPI) CreateLink(ctx context.Context, req *grpc.CreateLinkRequest)
 }
 
 func (api *LinkAPI) DescribeLink(ctx context.Context, req *grpc.DescribeLinkRequest) (*grpc.DescribeLinkResponse, error) {
-	grpclog.SetLoggerV2(grpczerolog.New(zerolog.New(os.Stdout)))
+	grpclog.SetLoggerV2(grpczerolog.New(api.logger))
 	grpclog.Info(req)
 
 	res := &grpc.DescribeLinkResponse{}
@@ -72,7 +73,7 @@ func (api *LinkAPI) DescribeLink(ctx context.Context, req *grpc.DescribeLinkRequ
 }
 
 func (api *LinkAPI) ListLink(ctx context.Context, req *grpc.ListLinkRequest) (*grpc.ListLinkResponse, error) {
-	grpclog.SetLoggerV2(grpczerolog.New(zerolog.New(os.Stdout)))
+	grpclog.SetLoggerV2(grpczerolog.New(api.logger))
 	grpclog.Info(req)
 
 	res := &grpc.ListLinkResponse{}
@@ -98,7 +99,7 @@ func (api *LinkAPI) ListLink(ctx context.Context, req *grpc.ListLinkRequest) (*g
 	return res, nil
 }
 func (api *LinkAPI) DeleteLink(ctx context.Context, req *grpc.DeleteLinkRequest) (*emptypb.Empty, error) {
-	grpclog.SetLoggerV2(grpczerolog.New(zerolog.New(os.Stdout)))
+	grpclog.SetLoggerV2(grpczerolog.New(api.logger))
 	grpclog.Info(req)
 
 	res := &emptypb.Empty{}
