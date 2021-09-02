@@ -2,13 +2,14 @@ package flusher_test
 
 import (
 	"errors"
+	"strconv"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/ozonva/ova-link-api/internal/flusher"
 	"github.com/ozonva/ova-link-api/internal/link"
 	"github.com/ozonva/ova-link-api/internal/mocks"
-	"strconv"
 )
 
 var _ = Describe("Flusher", func() {
@@ -35,7 +36,8 @@ var _ = Describe("Flusher", func() {
 			flusherImpl = flusher.NewFlusher(2, mockRepo)
 			entities = make([]link.Link, 0, 6)
 			for i := 0; i < 6; i++ {
-				link := link.New(uint64(i), uint64(i), "https://link"+strconv.Itoa(i))
+				link := link.New(uint64(i), "https://link"+strconv.Itoa(i))
+				link.ID = uint64(i)
 				entities = append(entities, *link)
 			}
 

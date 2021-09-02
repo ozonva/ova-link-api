@@ -78,10 +78,10 @@ func SliceFilterByList(inputSlice []int) []int {
 func SliceLinkToMapLink(links []link.Link) (map[uint64]link.Link, error) {
 	result := make(map[uint64]link.Link, len(links))
 	for _, l := range links {
-		if _, ok := result[l.GetID()]; ok {
+		if _, ok := result[l.ID]; ok {
 			return nil, errors.New("duplicate link id")
 		}
-		result[l.GetID()] = l
+		result[l.ID] = l
 	}
 
 	return result, nil

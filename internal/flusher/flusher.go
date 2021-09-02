@@ -1,6 +1,7 @@
 package flusher
 
 import (
+	"github.com/onsi/ginkgo"
 	"github.com/ozonva/ova-link-api/internal/link"
 	"github.com/ozonva/ova-link-api/internal/repo"
 	"github.com/ozonva/ova-link-api/internal/utils"
@@ -23,6 +24,7 @@ func NewFlusher(chunkSize uint, entityRepo repo.Repo) Flusher {
 }
 
 func (f *flusher) Flush(entities []link.Link) []link.Link {
+	defer ginkgo.GinkgoRecover()
 	unprocessedEntities := make([]link.Link, 0, len(entities))
 	for _, batch := range utils.SliceChunkLink(entities, f.chunkSize) {
 		err := f.entityRepo.AddEntities(batch)

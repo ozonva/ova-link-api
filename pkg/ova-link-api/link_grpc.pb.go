@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LinkAPIClient interface {
-	CreateLink(ctx context.Context, in *CreateLinkRequest, opts ...grpc.CallOption) (*CreateLinkResponse, error)
+	CreateLink(ctx context.Context, in *CreateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DescribeLink(ctx context.Context, in *DescribeLinkRequest, opts ...grpc.CallOption) (*DescribeLinkResponse, error)
 	ListLink(ctx context.Context, in *ListLinkRequest, opts ...grpc.CallOption) (*ListLinkResponse, error)
 	DeleteLink(ctx context.Context, in *DeleteLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -33,8 +33,8 @@ func NewLinkAPIClient(cc grpc.ClientConnInterface) LinkAPIClient {
 	return &linkAPIClient{cc}
 }
 
-func (c *linkAPIClient) CreateLink(ctx context.Context, in *CreateLinkRequest, opts ...grpc.CallOption) (*CreateLinkResponse, error) {
-	out := new(CreateLinkResponse)
+func (c *linkAPIClient) CreateLink(ctx context.Context, in *CreateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/ova.link.api.LinkAPI/CreateLink", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (c *linkAPIClient) DeleteLink(ctx context.Context, in *DeleteLinkRequest, o
 // All implementations must embed UnimplementedLinkAPIServer
 // for forward compatibility
 type LinkAPIServer interface {
-	CreateLink(context.Context, *CreateLinkRequest) (*CreateLinkResponse, error)
+	CreateLink(context.Context, *CreateLinkRequest) (*emptypb.Empty, error)
 	DescribeLink(context.Context, *DescribeLinkRequest) (*DescribeLinkResponse, error)
 	ListLink(context.Context, *ListLinkRequest) (*ListLinkResponse, error)
 	DeleteLink(context.Context, *DeleteLinkRequest) (*emptypb.Empty, error)
@@ -84,7 +84,7 @@ type LinkAPIServer interface {
 type UnimplementedLinkAPIServer struct {
 }
 
-func (UnimplementedLinkAPIServer) CreateLink(context.Context, *CreateLinkRequest) (*CreateLinkResponse, error) {
+func (UnimplementedLinkAPIServer) CreateLink(context.Context, *CreateLinkRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateLink not implemented")
 }
 func (UnimplementedLinkAPIServer) DescribeLink(context.Context, *DescribeLinkRequest) (*DescribeLinkResponse, error) {

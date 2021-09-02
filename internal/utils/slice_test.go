@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -44,17 +45,25 @@ var _ = Describe("Slice utils", func() {
 		)
 	})
 	Context("Split slice of link entities into chunks", func() {
-		slice := []link.Link{
-			*link.New(1, 1, "https://test1.com"),
-			*link.New(2, 1, "https://test2.com"),
-			*link.New(3, 1, "https://test3.com"),
-			*link.New(4, 2, "https://test4.com"),
-			*link.New(5, 2, "https://test5.com"),
-			*link.New(6, 2, "https://test6.com"),
-			*link.New(7, 3, "https://test7.com"),
-			*link.New(8, 3, "https://test8.com"),
-			*link.New(9, 3, "https://test9.com"),
-		}
+		link1 := link.New(1, "https://test1.com")
+		link1.ID = 1
+		link2 := link.New(1, "https://test2.com")
+		link2.ID = 2
+		link3 := link.New(1, "https://test3.com")
+		link3.ID = 3
+		link4 := link.New(2, "https://test4.com")
+		link4.ID = 4
+		link5 := link.New(2, "https://test5.com")
+		link5.ID = 5
+		link6 := link.New(2, "https://test6.com")
+		link6.ID = 6
+		link7 := link.New(3, "https://test7.com")
+		link7.ID = 7
+		link8 := link.New(3, "https://test8.com")
+		link8.ID = 8
+		link9 := link.New(3, "https://test9.com")
+		link9.ID = 9
+		slice := []link.Link{*link1, *link2, *link3, *link4, *link5, *link6, *link7, *link8, *link9}
 
 		DescribeTable("Convert slice of link entities into map",
 			func(input []link.Link, size uint, expected [][]link.Link) {
@@ -87,53 +96,4 @@ var _ = Describe("Slice utils", func() {
 			Entry("slice with duplicates", append(slice[:3], slice[0]), nil, errors.New("duplicate link id")),
 		)
 	})
-
 })
-
-//var link1 = *link.New(1, 1, "https://test1.com")
-//var link2 = *link.New(2, 1, "https://test2.com")
-//var link3 = *link.New(3, 1, "https://test3.com")
-//var link4 = *link.New(4, 2, "https://test4.com")
-//var link5 = *link.New(5, 2, "https://test5.com")
-//var link6 = *link.New(6, 2, "https://test6.com")
-//var link7 = *link.New(7, 3, "https://test7.com")
-//var link8 = *link.New(8, 3, "https://test8.com")
-//var link9 = *link.New(9, 3, "https://test9.com")
-//
-//var linkDuplicate = *link.New(1, 1, "https://test1.com")
-//var sliceLinkToMapLinkTestCases = []struct {
-//	caseName   string
-//	inputSlice []link.Link
-//	result     map[uint64]link.Link
-//	error      error
-//}{
-//	{"empty slice", []link.Link{}, make(map[uint64]link.Link, 0), nil},
-//	{"slice without duplicates", []link.Link{link1, link2, link3}, map[uint64]link.Link{1: link1, 2: link2, 3: link3}, nil},
-//	{"slice with duplicates", []link.Link{link1, link2, link3, linkDuplicate}, nil, errors.New("duplicate link id")},
-//}
-//
-//func TestSliceLinkToMapLink(t *testing.T) {
-//	for _, testCase := range sliceLinkToMapLinkTestCases {
-//		result, err := SliceLinkToMapLink(testCase.inputSlice)
-//		if err != nil && testCase.error == nil {
-//			t.Fatalf(`%v. Error expected: %v. Error actual: %v`, testCase.caseName, testCase.error, err)
-//		}
-//
-//		if err != nil && err.Error() != testCase.error.Error() {
-//			t.Fatalf(`%v. Error expected: %v. Error actual: %v`, testCase.caseName, testCase.error, err)
-//		}
-//
-//		if err == nil && testCase.error == nil {
-//			for i, value := range result {
-//				if _, ok := testCase.result[i]; !ok {
-//					t.Fatalf(`%v. Expected: %v. Actual: %v`, testCase.caseName, testCase.result, result)
-//				}
-//
-//				v := testCase.result[i]
-//				if !value.Equals(&v) {
-//					t.Fatalf(`%v. Expected: %v. Actual: %v`, testCase.caseName, testCase.result, result)
-//				}
-//			}
-//		}
-//	}
-//}
