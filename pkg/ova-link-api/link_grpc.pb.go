@@ -23,6 +23,7 @@ type LinkAPIClient interface {
 	DescribeLink(ctx context.Context, in *DescribeLinkRequest, opts ...grpc.CallOption) (*DescribeLinkResponse, error)
 	ListLink(ctx context.Context, in *ListLinkRequest, opts ...grpc.CallOption) (*ListLinkResponse, error)
 	DeleteLink(ctx context.Context, in *DeleteLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateLink(ctx context.Context, in *UpdateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type linkAPIClient struct {
@@ -69,6 +70,15 @@ func (c *linkAPIClient) DeleteLink(ctx context.Context, in *DeleteLinkRequest, o
 	return out, nil
 }
 
+func (c *linkAPIClient) UpdateLink(ctx context.Context, in *UpdateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/ova.link.api.LinkAPI/UpdateLink", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LinkAPIServer is the server API for LinkAPI service.
 // All implementations must embed UnimplementedLinkAPIServer
 // for forward compatibility
@@ -77,6 +87,7 @@ type LinkAPIServer interface {
 	DescribeLink(context.Context, *DescribeLinkRequest) (*DescribeLinkResponse, error)
 	ListLink(context.Context, *ListLinkRequest) (*ListLinkResponse, error)
 	DeleteLink(context.Context, *DeleteLinkRequest) (*emptypb.Empty, error)
+	UpdateLink(context.Context, *UpdateLinkRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedLinkAPIServer()
 }
 
@@ -95,6 +106,9 @@ func (UnimplementedLinkAPIServer) ListLink(context.Context, *ListLinkRequest) (*
 }
 func (UnimplementedLinkAPIServer) DeleteLink(context.Context, *DeleteLinkRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteLink not implemented")
+}
+func (UnimplementedLinkAPIServer) UpdateLink(context.Context, *UpdateLinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateLink not implemented")
 }
 func (UnimplementedLinkAPIServer) mustEmbedUnimplementedLinkAPIServer() {}
 
@@ -181,6 +195,24 @@ func _LinkAPI_DeleteLink_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LinkAPI_UpdateLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LinkAPIServer).UpdateLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ova.link.api.LinkAPI/UpdateLink",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LinkAPIServer).UpdateLink(ctx, req.(*UpdateLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LinkAPI_ServiceDesc is the grpc.ServiceDesc for LinkAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -203,6 +235,10 @@ var LinkAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteLink",
 			Handler:    _LinkAPI_DeleteLink_Handler,
+		},
+		{
+			MethodName: "UpdateLink",
+			Handler:    _LinkAPI_UpdateLink_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

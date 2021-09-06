@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
+
+	"github.com/ozonva/ova-link-api/internal/kafka"
 
 	"github.com/rs/zerolog"
 
@@ -22,6 +25,10 @@ import (
 
 type LinkMatcher struct {
 	expected []link.Link
+}
+
+type KafkaMatcher struct {
+	expected kafka.Message
 }
 
 func (lm LinkMatcher) Matches(x interface{}) bool {
@@ -52,16 +59,54 @@ func (lm LinkMatcher) String() string {
 	return fmt.Sprintf("is equal to %v (%T)", lm.expected, lm.expected)
 }
 
+func (km KafkaMatcher) Matches(x interface{}) bool {
+	message := x.(kafka.Message)
+
+	if message.EventType != km.expected.EventType {
+		return false
+	}
+
+	if val, ok := message.Value.(link.Link); ok {
+		expected := km.expected.Value.(link.Link)
+		if expected.UserID != val.UserID {
+			return false
+		}
+		if expected.Description != val.Description {
+			return false
+		}
+		if expected.Tags != val.Tags {
+			return false
+		}
+		if expected.Url != val.Url {
+			return false
+		}
+
+		return true
+	}
+
+	if !reflect.DeepEqual(message.Value, km.expected.Value) {
+		return false
+	}
+
+	return true
+}
+
+func (km KafkaMatcher) String() string {
+	return fmt.Sprintf("is equal to %v (%T)", km.expected, km.expected)
+}
+
 var _ = Describe("Api", func() {
 	Context("Database", func() {
 		var API grpc.LinkAPIServer
 		var ctrl *gomock.Controller
 		var mockRepo *mocks.MockRepo
+		var mockProducer *mocks.MockProducer
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			mockRepo = mocks.NewMockRepo(ctrl)
-			API = api.NewLinkAPI(mockRepo, zerolog.Nop())
+			mockProducer = mocks.NewMockProducer(ctrl)
+			API = api.NewLinkAPI(mockRepo, zerolog.Nop(), mockProducer)
 		})
 
 		AfterEach(func() {
@@ -174,6 +219,11 @@ var _ = Describe("Api", func() {
 		It("Delete success", func() {
 			mockRepo.EXPECT().DeleteEntity(gomock.Eq(uint64(1))).Times(1).Return(nil)
 
+			kafkaMatcher := KafkaMatcher{
+				expected: kafka.Message{EventType: kafka.Remove, Value: uint64(1)},
+			}
+			mockProducer.EXPECT().Send(kafkaMatcher).Times(1).Return(nil)
+
 			_, err := API.DeleteLink(
 				context.Background(),
 				&ova_link_api.DeleteLinkRequest{
@@ -215,6 +265,11 @@ var _ = Describe("Api", func() {
 				expected: insert,
 			}
 			mockRepo.EXPECT().AddEntities(linkMatcher).Times(1).Return(nil)
+
+			kafkaMatcher := KafkaMatcher{
+				expected: kafka.Message{EventType: kafka.Create, Value: insert[0]},
+			}
+			mockProducer.EXPECT().Send(kafkaMatcher).Times(1).Return(nil)
 
 			_, err := API.CreateLink(
 				context.Background(),

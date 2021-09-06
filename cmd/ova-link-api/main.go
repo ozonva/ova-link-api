@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 
+	"github.com/ozonva/ova-link-api/internal/kafka"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/ozonva/ova-link-api/internal/api"
 	"github.com/ozonva/ova-link-api/internal/repo"
@@ -28,7 +30,12 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	linkAPI.RegisterLinkAPIServer(s, api.NewLinkAPI(repo.NewLinkRepo(db), zerolog.New(os.Stdout)))
+	producer, err := kafka.NewProducer([]string{"127.0.0.1:9093"})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	linkAPI.RegisterLinkAPIServer(s, api.NewLinkAPI(repo.NewLinkRepo(db), zerolog.New(os.Stdout), producer))
 
 	if err := s.Serve(listen); err != nil {
 		log.Fatalf("failed to serve: %v", err)

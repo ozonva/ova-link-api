@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 
+	"github.com/ozonva/ova-link-api/internal/kafka"
+
 	"github.com/ozonva/ova-link-api/internal/repo"
 
 	"github.com/ozonva/ova-link-api/internal/link"
@@ -23,16 +25,19 @@ import (
 
 type LinkAPI struct {
 	grpc.LinkAPIServer
-	repo   repo.Repo
-	saver  saver.Saver
-	logger zerolog.Logger
+	repo     repo.Repo
+	saver    saver.Saver
+	logger   zerolog.Logger
+	producer kafka.Producer
 }
 
-func NewLinkAPI(repo repo.Repo, logger zerolog.Logger) grpc.LinkAPIServer {
+func NewLinkAPI(repo repo.Repo, logger zerolog.Logger, producer kafka.Producer) grpc.LinkAPIServer {
 	api := &LinkAPI{}
 	api.repo = repo
 	api.saver = saver.NewTimeOutSaver(10, flusher.NewFlusher(3, api.repo), 1)
 	api.logger = logger
+	api.producer = producer
+
 	return api
 }
 
@@ -45,6 +50,15 @@ func (api *LinkAPI) CreateLink(ctx context.Context, req *grpc.CreateLinkRequest)
 	entity.SetTagsAsSlice(req.Tags)
 	api.saver.Save(*entity)
 	api.saver.Close()
+
+	err := api.producer.Send(kafka.Message{
+		EventType: kafka.Create,
+		Value:     *entity,
+	})
+
+	if err != nil {
+		return nil, err
+	}
 
 	res := &emptypb.Empty{}
 	grpclog.Info(res)
@@ -106,6 +120,40 @@ func (api *LinkAPI) DeleteLink(ctx context.Context, req *grpc.DeleteLinkRequest)
 	err := api.repo.DeleteEntity(req.GetId())
 	if err != nil {
 		return res, err
+	}
+
+	err = api.producer.Send(kafka.Message{
+		EventType: kafka.Remove,
+		Value:     req.GetId(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	grpclog.Info(res)
+	return res, nil
+}
+
+func (api *LinkAPI) UpdateLink(ctx context.Context, req *grpc.UpdateLinkRequest) (*emptypb.Empty, error) {
+	grpclog.SetLoggerV2(grpczerolog.New(api.logger))
+	grpclog.Info(req)
+
+	res := &emptypb.Empty{}
+	entity := link.New(req.UserId, req.Url)
+	entity.Description = req.Description
+	entity.SetTagsAsSlice(req.Tags)
+
+	err := api.repo.UpdateEntity(*entity, req.Id)
+	if err != nil {
+		return res, err
+	}
+
+	err = api.producer.Send(kafka.Message{
+		EventType: kafka.Update,
+		Value:     entity,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	grpclog.Info(res)

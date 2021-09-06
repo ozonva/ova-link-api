@@ -13,6 +13,15 @@ message CreateLinkRequest {
   repeated string tags = 4;
 }
 
+message UpdateLinkRequest {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string url = 3;
+  string description = 4;
+  repeated string tags = 5;
+}
+
+
 message DeleteLinkRequest {
   uint64 id = 1;
 }
@@ -44,4 +53,5 @@ service LinkAPI {
   rpc DescribeLink(DescribeLinkRequest) returns (DescribeLinkResponse) {}
   rpc ListLink(ListLinkRequest) returns (ListLinkResponse) {}
   rpc DeleteLink(DeleteLinkRequest) returns (google.protobuf.Empty) {}
+  rpc UpdateLink(UpdateLinkRequest) returns (google.protobuf.Empty) {}
 }

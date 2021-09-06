@@ -13,10 +13,35 @@ services:
     volumes:
       - /tmp/psqldata:/var/lib/postgresql/data
       - /tmp:/tmp
-
   adminer:
     container_name: adminers.local
     image: adminer
     restart: always
     ports:
       - "8080:8080"
+  zookeeper:
+    container_name: zookeeper.local
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka.local
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INT://kafka.local:9092,EXT://127.0.0.1:9093
+      KAFKA_LISTENERS: INT://kafka.local:9092,EXT://:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INT:PLAINTEXT,EXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INT
+      KAFKA_CREATE_TOPICS: "ova-link-api:1:1"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop.local
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka.local:9092"
