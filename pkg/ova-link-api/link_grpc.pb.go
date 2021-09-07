@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LinkAPIClient interface {
+	MultiCreateLink(ctx context.Context, in *MultiCreateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateLink(ctx context.Context, in *CreateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DescribeLink(ctx context.Context, in *DescribeLinkRequest, opts ...grpc.CallOption) (*DescribeLinkResponse, error)
 	ListLink(ctx context.Context, in *ListLinkRequest, opts ...grpc.CallOption) (*ListLinkResponse, error)
@@ -32,6 +33,15 @@ type linkAPIClient struct {
 
 func NewLinkAPIClient(cc grpc.ClientConnInterface) LinkAPIClient {
 	return &linkAPIClient{cc}
+}
+
+func (c *linkAPIClient) MultiCreateLink(ctx context.Context, in *MultiCreateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/ova.link.api.LinkAPI/MultiCreateLink", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *linkAPIClient) CreateLink(ctx context.Context, in *CreateLinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
@@ -83,6 +93,7 @@ func (c *linkAPIClient) UpdateLink(ctx context.Context, in *UpdateLinkRequest, o
 // All implementations must embed UnimplementedLinkAPIServer
 // for forward compatibility
 type LinkAPIServer interface {
+	MultiCreateLink(context.Context, *MultiCreateLinkRequest) (*emptypb.Empty, error)
 	CreateLink(context.Context, *CreateLinkRequest) (*emptypb.Empty, error)
 	DescribeLink(context.Context, *DescribeLinkRequest) (*DescribeLinkResponse, error)
 	ListLink(context.Context, *ListLinkRequest) (*ListLinkResponse, error)
@@ -95,6 +106,9 @@ type LinkAPIServer interface {
 type UnimplementedLinkAPIServer struct {
 }
 
+func (UnimplementedLinkAPIServer) MultiCreateLink(context.Context, *MultiCreateLinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MultiCreateLink not implemented")
+}
 func (UnimplementedLinkAPIServer) CreateLink(context.Context, *CreateLinkRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateLink not implemented")
 }
@@ -121,6 +135,24 @@ type UnsafeLinkAPIServer interface {
 
 func RegisterLinkAPIServer(s grpc.ServiceRegistrar, srv LinkAPIServer) {
 	s.RegisterService(&LinkAPI_ServiceDesc, srv)
+}
+
+func _LinkAPI_MultiCreateLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MultiCreateLinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LinkAPIServer).MultiCreateLink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ova.link.api.LinkAPI/MultiCreateLink",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LinkAPIServer).MultiCreateLink(ctx, req.(*MultiCreateLinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _LinkAPI_CreateLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -220,6 +252,10 @@ var LinkAPI_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ova.link.api.LinkAPI",
 	HandlerType: (*LinkAPIServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "MultiCreateLink",
+			Handler:    _LinkAPI_MultiCreateLink_Handler,
+		},
 		{
 			MethodName: "CreateLink",
 			Handler:    _LinkAPI_CreateLink_Handler,

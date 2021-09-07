@@ -48,7 +48,12 @@ message ListLinkResponse {
   repeated DescribeLinkResponse items = 1;
 }
 
+message MultiCreateLinkRequest {
+  repeated CreateLinkRequest items = 1;
+}
+
 service LinkAPI {
+  rpc MultiCreateLink(MultiCreateLinkRequest) returns (google.protobuf.Empty) {}
   rpc CreateLink(CreateLinkRequest) returns (google.protobuf.Empty) {}
   rpc DescribeLink(DescribeLinkRequest) returns (DescribeLinkResponse) {}
   rpc ListLink(ListLinkRequest) returns (ListLinkResponse) {}

@@ -3,7 +3,12 @@ package main
 import (
 	"log"
 	"net"
+	"net/http"
 	"os"
+
+	"github.com/ozonva/ova-link-api/internal/metrics"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/ozonva/ova-link-api/internal/kafka"
 
@@ -35,7 +40,21 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	linkAPI.RegisterLinkAPIServer(s, api.NewLinkAPI(repo.NewLinkRepo(db), zerolog.New(os.Stdout), producer))
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		err = http.ListenAndServe(":9200", nil)
+		if err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
+
+	handler := api.NewLinkAPI(
+		repo.NewLinkRepo(db),
+		zerolog.New(os.Stdout),
+		producer,
+		metrics.NewMetrics(),
+	)
+	linkAPI.RegisterLinkAPIServer(s, handler)
 
 	if err := s.Serve(listen); err != nil {
 		log.Fatalf("failed to serve: %v", err)

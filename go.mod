@@ -20,6 +20,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
+	github.com/prometheus/client_golang v1.11.0
 	github.com/rs/zerolog v1.23.0
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/zhashkevych/go-sqlxmock v1.5.2-0.20201023121933-f973d0041cfc

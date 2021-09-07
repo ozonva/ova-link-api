@@ -23,6 +23,7 @@ const (
 	Create EventType = iota
 	Update
 	Remove
+	MultiCreate
 )
 
 type Message struct {
