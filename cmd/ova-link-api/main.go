@@ -1,10 +1,15 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+
+	"github.com/opentracing/opentracing-go"
+
+	"github.com/uber/jaeger-client-go"
 
 	"github.com/ozonva/ova-link-api/internal/metrics"
 
@@ -18,6 +23,9 @@ import (
 	"github.com/rs/zerolog"
 
 	linkAPI "github.com/ozonva/ova-link-api/pkg/ova-link-api"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
+	jaegerlog "github.com/uber/jaeger-client-go/log"
+	jaegermetrics "github.com/uber/jaeger-lib/metrics"
 
 	"google.golang.org/grpc"
 )
@@ -47,6 +55,36 @@ func main() {
 			log.Fatalf("failed to serve: %v", err)
 		}
 	}()
+
+	cfg := jaegercfg.Configuration{
+		ServiceName: "ova-link-api",
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+
+	jLogger := jaegerlog.StdLogger
+	jMetricsFactory := jaegermetrics.NullFactory
+
+	tracer, closer, err := cfg.NewTracer(
+		jaegercfg.Logger(jLogger),
+		jaegercfg.Metrics(jMetricsFactory),
+	)
+	if err != nil {
+		log.Fatalf("Can not create tracer, %s", err)
+	}
+
+	opentracing.SetGlobalTracer(tracer)
+	defer func(io.Closer) {
+		err := closer.Close()
+		if err != nil {
+			log.Fatalf("Can not close tracer, %s", err)
+		}
+	}(closer)
 
 	handler := api.NewLinkAPI(
 		repo.NewLinkRepo(db),

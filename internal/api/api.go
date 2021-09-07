@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 
+	"github.com/opentracing/opentracing-go"
+
 	"github.com/ozonva/ova-link-api/internal/metrics"
 
 	"github.com/ozonva/ova-link-api/internal/utils"
@@ -37,14 +39,13 @@ type LinkAPI struct {
 }
 
 func NewLinkAPI(repo repo.Repo, logger zerolog.Logger, producer kafka.Producer, metrics metrics.Metrics) grpc.LinkAPIServer {
-	api := &LinkAPI{}
-	api.repo = repo
-	api.saver = saver.NewTimeOutSaver(10, flusher.NewFlusher(3, api.repo), 1)
-	api.logger = logger
-	api.producer = producer
-	api.metrics = metrics
-
-	return api
+	return &LinkAPI{
+		repo:     repo,
+		saver:    saver.NewTimeOutSaver(10, flusher.NewFlusher(3, repo), 1),
+		logger:   logger,
+		producer: producer,
+		metrics:  metrics,
+	}
 }
 
 func (api *LinkAPI) CreateLink(ctx context.Context, req *grpc.CreateLinkRequest) (*emptypb.Empty, error) {
@@ -181,6 +182,13 @@ func (api *LinkAPI) MultiCreateLink(ctx context.Context, req *grpc.MultiCreateLi
 		links = append(links, *entity)
 	}
 
+	tracer := opentracing.GlobalTracer()
+	parentSpan := tracer.StartSpan(
+		"MultiCreate",
+		opentracing.Tag{Key: "TotalCount", Value: len(links)},
+	)
+	defer parentSpan.Finish()
+
 	bulks := utils.SliceChunkLink(links, uint(3))
 
 	for _, bulk := range bulks {
@@ -196,6 +204,13 @@ func (api *LinkAPI) MultiCreateLink(ctx context.Context, req *grpc.MultiCreateLi
 		if err != nil {
 			return nil, err
 		}
+
+		span := opentracing.StartSpan(
+			"MultiCreate",
+			opentracing.Tag{Key: "BulkCount", Value: len(bulk)},
+			opentracing.ChildOf(parentSpan.Context()),
+		)
+		span.Finish()
 	}
 
 	api.metrics.MultiCreateSuccessResponseCounter()
