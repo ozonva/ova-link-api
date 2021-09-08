@@ -3,6 +3,14 @@ package api
 import (
 	"context"
 
+	"github.com/opentracing/opentracing-go"
+
+	"github.com/ozonva/ova-link-api/internal/metrics"
+
+	"github.com/ozonva/ova-link-api/internal/utils"
+
+	"github.com/ozonva/ova-link-api/internal/kafka"
+
 	"github.com/ozonva/ova-link-api/internal/repo"
 
 	"github.com/ozonva/ova-link-api/internal/link"
@@ -23,17 +31,21 @@ import (
 
 type LinkAPI struct {
 	grpc.LinkAPIServer
-	repo   repo.Repo
-	saver  saver.Saver
-	logger zerolog.Logger
+	repo     repo.Repo
+	saver    saver.Saver
+	logger   zerolog.Logger
+	producer kafka.Producer
+	metrics  metrics.Metrics
 }
 
-func NewLinkAPI(repo repo.Repo, logger zerolog.Logger) grpc.LinkAPIServer {
-	api := &LinkAPI{}
-	api.repo = repo
-	api.saver = saver.NewTimeOutSaver(10, flusher.NewFlusher(3, api.repo), 1)
-	api.logger = logger
-	return api
+func NewLinkAPI(repo repo.Repo, logger zerolog.Logger, producer kafka.Producer, metrics metrics.Metrics) grpc.LinkAPIServer {
+	return &LinkAPI{
+		repo:     repo,
+		saver:    saver.NewTimeOutSaver(10, flusher.NewFlusher(3, repo), 1),
+		logger:   logger,
+		producer: producer,
+		metrics:  metrics,
+	}
 }
 
 func (api *LinkAPI) CreateLink(ctx context.Context, req *grpc.CreateLinkRequest) (*emptypb.Empty, error) {
@@ -44,8 +56,17 @@ func (api *LinkAPI) CreateLink(ctx context.Context, req *grpc.CreateLinkRequest)
 	entity.Description = req.Description
 	entity.SetTagsAsSlice(req.Tags)
 	api.saver.Save(*entity)
-	api.saver.Close()
 
+	err := api.producer.Send(kafka.Message{
+		EventType: kafka.Create,
+		Value:     *entity,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	api.metrics.CreateSuccessResponseCounter()
 	res := &emptypb.Empty{}
 	grpclog.Info(res)
 	return res, nil
@@ -68,6 +89,7 @@ func (api *LinkAPI) DescribeLink(ctx context.Context, req *grpc.DescribeLinkRequ
 	res.Tags = result.GetTagsAsSlice()
 	res.DateCreated = timestamppb.New(result.CreatedAt)
 
+	api.metrics.DescribeSuccessResponseCounter()
 	grpclog.Info(res)
 	return res, nil
 }
@@ -95,6 +117,7 @@ func (api *LinkAPI) ListLink(ctx context.Context, req *grpc.ListLinkRequest) (*g
 		res.Items = append(res.Items, resEntity)
 	}
 
+	api.metrics.ListSuccessResponseCounter()
 	grpclog.Info(res)
 	return res, nil
 }
@@ -108,6 +131,90 @@ func (api *LinkAPI) DeleteLink(ctx context.Context, req *grpc.DeleteLinkRequest)
 		return res, err
 	}
 
+	err = api.producer.Send(kafka.Message{
+		EventType: kafka.Remove,
+		Value:     req.GetId(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	api.metrics.RemoveSuccessResponseCounter()
+	grpclog.Info(res)
+	return res, nil
+}
+
+func (api *LinkAPI) UpdateLink(ctx context.Context, req *grpc.UpdateLinkRequest) (*emptypb.Empty, error) {
+	grpclog.SetLoggerV2(grpczerolog.New(api.logger))
+	grpclog.Info(req)
+
+	res := &emptypb.Empty{}
+	entity := link.New(req.UserId, req.Url)
+	entity.Description = req.Description
+	entity.SetTagsAsSlice(req.Tags)
+
+	err := api.repo.UpdateEntity(*entity, req.Id)
+	if err != nil {
+		return res, err
+	}
+
+	err = api.producer.Send(kafka.Message{
+		EventType: kafka.Update,
+		Value:     *entity,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	api.metrics.UpdateSuccessResponseCounter()
+	grpclog.Info(res)
+	return res, nil
+}
+
+func (api *LinkAPI) MultiCreateLink(ctx context.Context, req *grpc.MultiCreateLinkRequest) (*emptypb.Empty, error) {
+	grpclog.SetLoggerV2(grpczerolog.New(api.logger))
+	grpclog.Info(req)
+
+	links := make([]link.Link, 0, len(req.Items))
+	for _, item := range req.Items {
+		entity := link.New(item.UserId, item.Url)
+		entity.Description = item.Description
+		entity.SetTagsAsSlice(item.Tags)
+		links = append(links, *entity)
+	}
+
+	tracer := opentracing.GlobalTracer()
+	parentSpan := tracer.StartSpan(
+		"MultiCreate",
+		opentracing.Tag{Key: "TotalCount", Value: len(links)},
+	)
+	defer parentSpan.Finish()
+
+	bulks := utils.SliceChunkLink(links, uint(3))
+
+	for _, bulk := range bulks {
+		err := api.repo.AddEntities(bulk)
+		if err != nil {
+			return nil, err
+		}
+
+		err = api.producer.Send(kafka.Message{
+			EventType: kafka.MultiCreate,
+			Value:     bulk,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		span := opentracing.StartSpan(
+			"MultiCreate",
+			opentracing.Tag{Key: "BulkCount", Value: len(bulk)},
+			opentracing.ChildOf(parentSpan.Context()),
+		)
+		span.Finish()
+	}
+
+	api.metrics.MultiCreateSuccessResponseCounter()
+	res := &emptypb.Empty{}
 	grpclog.Info(res)
 	return res, nil
 }

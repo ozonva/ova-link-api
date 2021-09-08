@@ -25,6 +25,9 @@ test-internal:
 generate-mocks:
 	go generate ./internal/mockgen.go
 
+up:
+	docker-compose -f ./docker-compose.yml up -d && docker-compose -f ./docker-compose-prom.yml up -d
+
 BIN_PATH = $(PWD)/bin
 install:
 	mkdir -p bin && \

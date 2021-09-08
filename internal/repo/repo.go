@@ -12,6 +12,7 @@ type Repo interface {
 	ListEntities(limit uint64, offset uint64) ([]link.Link, error)
 	DescribeEntity(entityId uint64) (*link.Link, error)
 	DeleteEntity(entityId uint64) error
+	UpdateEntity(entity link.Link, entityId uint64) error
 }
 
 type LinkRepo struct {
@@ -96,6 +97,32 @@ func (lp *LinkRepo) DeleteEntity(entityId uint64) error {
 	}
 
 	_, err = lp.db.Exec(sql, entityId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (lp *LinkRepo) UpdateEntity(entity link.Link, entityId uint64) error {
+	updateFields := make(map[string]interface{}, 0)
+	updateFields["user_id"] = entity.UserID
+	updateFields["url"] = entity.Url
+	updateFields["description"] = entity.Description
+	updateFields["tags"] = entity.Tags
+
+	sqlBuilder := squirrel.StatementBuilder.
+		PlaceholderFormat(squirrel.Dollar).
+		Update("links").
+		SetMap(updateFields).
+		Where("id = ?")
+
+	sql, args, err := sqlBuilder.ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = lp.db.Exec(sql, append(args, entityId)...)
 	if err != nil {
 		return err
 	}
